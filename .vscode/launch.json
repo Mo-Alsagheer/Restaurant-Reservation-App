@@ -1,0 +1,46 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Vendor App",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main_vendor.dart"
+        },
+        {
+            "name": "Vendor App (profile mode)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main_vendor.dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "Vendor App (release mode)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main_vendor.dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "restaurant_reservation_app",
+            "request": "launch",
+            "program": "lib/main_vendor.dart",
+            "type": "dart"
+        },
+        {
+            "name": "restaurant_reservation_app (profile mode)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "restaurant_reservation_app (release mode)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}
