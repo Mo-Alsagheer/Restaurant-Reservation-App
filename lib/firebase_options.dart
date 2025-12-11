@@ -83,4 +83,5 @@ class DefaultFirebaseOptions {
     authDomain: 'restaurant-reservation2-b02f0.firebaseapp.com',
     storageBucket: 'restaurant-reservation2-b02f0.firebasestorage.app',
   );
+
 }
