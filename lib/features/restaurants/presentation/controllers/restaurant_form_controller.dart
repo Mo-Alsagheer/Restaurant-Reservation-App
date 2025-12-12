@@ -105,7 +105,9 @@ class RestaurantFormController extends StateNotifier<RestaurantFormState> {
           // Preserve success of restaurant creation and surface a non-blocking message
           // Only set error if it isn't a Firestore permission error pattern
           final msg = e.toString();
-          final isPermissionDenied = msg.contains('permission-denied') || msg.contains('PERMISSION_DENIED');
+          final isPermissionDenied =
+              msg.contains('permission-denied') ||
+              msg.contains('PERMISSION_DENIED');
           if (!isPermissionDenied) {
             // Unexpected error: record but continue
             state = state.copyWith(error: msg);

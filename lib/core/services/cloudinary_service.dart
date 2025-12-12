@@ -86,7 +86,7 @@ class CloudinaryService {
       }
 
       final filePath = file.absolute.path;
-      
+
       // Generate output path in the same directory as source
       final directory = file.parent.path;
       final fileName = path.basenameWithoutExtension(filePath);

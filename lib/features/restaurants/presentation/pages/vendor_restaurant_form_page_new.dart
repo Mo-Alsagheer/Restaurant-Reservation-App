@@ -164,9 +164,9 @@ class _VendorRestaurantFormPageState
       }
 
       if (state.error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${state.error}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${state.error}')));
       }
     }
   }
