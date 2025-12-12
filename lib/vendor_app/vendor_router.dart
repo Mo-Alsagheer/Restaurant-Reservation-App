@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import '../features/restaurants/presentation/vendor_restaurant_dashboard_page.dart';
-import '../features/restaurants/presentation/vendor_restaurant_form_page.dart';
+import '../features/restaurants/presentation/pages/vendor_restaurant_form_page_new.dart';
+import '../features/restaurants/presentation/pages/food_category_management_page.dart';
 import '../features/tables/presentation/table_management_page.dart';
 import '../features/bookings/presentation/vendor_bookings_page.dart';
 
@@ -41,6 +42,11 @@ class VendorRouter {
           final restaurantId = state.pathParameters['id']!;
           return VendorBookingsPage(restaurantId: restaurantId);
         },
+      ),
+      GoRoute(
+        path: '/categories',
+        name: 'food-categories',
+        builder: (context, state) => const FoodCategoryManagementPage(),
       ),
     ],
   );

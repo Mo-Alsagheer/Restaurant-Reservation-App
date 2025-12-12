@@ -1,1 +1,42 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"restaurant-reservation2-b02f0","appId":"1:890349740264:android:9878c1cb9ce5cb0ab0695d","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"restaurant-reservation2-b02f0","configurations":{"android":"1:890349740264:android:9878c1cb9ce5cb0ab0695d","ios":"1:890349740264:ios:5bc810cad6fcbc84b0695d","macos":"1:890349740264:ios:5bc810cad6fcbc84b0695d","web":"1:890349740264:web:3be239783913be5cb0695d","windows":"1:890349740264:web:83c88b4532bad87eb0695d"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "restaurant-reservation2-b02f0",
+          "appId": "1:890349740264:android:9878c1cb9ce5cb0ab0695d",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "restaurant-reservation2-b02f0",
+          "configurations": {
+            "android": "1:890349740264:android:9878c1cb9ce5cb0ab0695d",
+            "ios": "1:890349740264:ios:5bc810cad6fcbc84b0695d",
+            "macos": "1:890349740264:ios:5bc810cad6fcbc84b0695d",
+            "web": "1:890349740264:web:3be239783913be5cb0695d",
+            "windows": "1:890349740264:web:83c88b4532bad87eb0695d"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "disallowLegacyRuntimeConfig": true,
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ]
+    }
+  ]
+}

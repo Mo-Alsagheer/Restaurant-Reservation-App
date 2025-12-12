@@ -5,7 +5,7 @@ import 'package:restaurant_reservation_app/customer_app/custom-widgets/card.dart
 import 'package:restaurant_reservation_app/customer_app/custom-widgets/title.dart';
 
 class RestaurantsScreen extends StatefulWidget {
-  RestaurantsScreen({super.key});
+  const RestaurantsScreen({super.key});
 
   @override
   State<RestaurantsScreen> createState() => _RestaurantsScreenState();
@@ -154,7 +154,7 @@ class _RestaurantsScreenState extends State<RestaurantsScreen> {
             SizedBox(height: 8),
 
             // ⭐ Category Chips
-            Container(
+            SizedBox(
               height: 50,
               child: ListView(
                 scrollDirection: Axis.horizontal,
