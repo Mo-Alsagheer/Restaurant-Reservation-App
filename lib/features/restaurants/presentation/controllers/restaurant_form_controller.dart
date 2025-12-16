@@ -91,15 +91,17 @@ class RestaurantFormController extends StateNotifier<RestaurantFormState> {
         restaurant,
       );
 
-      // 4. Create tables as subcollection
+      // 4. Create tables as subcollection (with duplicate prevention)
+      final createdTableNumbers = <int>{};
       for (final table in tables) {
-        await _tableRepository.createTable(restaurantId, table);
-      }
+        // Skip if we've already created a table with this number
+        if (createdTableNumbers.contains(table.tableNumber)) {
+          continue;
+        }
 
-      // 4. Create tables as subcollection (non-blocking on permission errors)
-      for (final table in tables) {
         try {
           await _tableRepository.createTable(restaurantId, table);
+          createdTableNumbers.add(table.tableNumber);
         } catch (e) {
           // If tables write fails due to permissions, don't fail the whole operation
           // Preserve success of restaurant creation and surface a non-blocking message
@@ -114,6 +116,8 @@ class RestaurantFormController extends StateNotifier<RestaurantFormState> {
           }
         }
       }
+
+      state = state.copyWith(isLoading: false);
       return restaurantId;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());

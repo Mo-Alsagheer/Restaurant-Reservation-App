@@ -35,9 +35,15 @@ class ReservationFirestoreDataSource {
   Stream<List<Reservation>> watchRestaurantReservations(String restaurantId) {
     return _reservationsCollection
         .where('restaurantId', isEqualTo: restaurantId)
-        .orderBy('reservationDate', descending: false)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map(_fromFirestore).toList());
+        .map((snapshot) {
+          final reservations = snapshot.docs.map(_fromFirestore).toList();
+          // Sort in memory instead of using orderBy to avoid index requirement
+          reservations.sort(
+            (a, b) => a.reservationDate.compareTo(b.reservationDate),
+          );
+          return reservations;
+        });
   }
 
   // Get reservations for a specific date and restaurant
@@ -90,9 +96,15 @@ class ReservationFirestoreDataSource {
   Stream<List<Reservation>> watchCustomerReservations(String customerId) {
     return _reservationsCollection
         .where('customerId', isEqualTo: customerId)
-        .orderBy('reservationDate', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map(_fromFirestore).toList());
+        .map((snapshot) {
+          final reservations = snapshot.docs.map(_fromFirestore).toList();
+          // Sort in memory to avoid index requirement
+          reservations.sort(
+            (a, b) => b.reservationDate.compareTo(a.reservationDate),
+          );
+          return reservations;
+        });
   }
 
   // Cancel reservation

@@ -7,6 +7,10 @@ import '../../../../core/domain/models/food_category.dart';
 import '../../../../core/domain/models/location.dart';
 import '../../../../core/domain/models/table_model.dart';
 import '../../../../core/domain/models/time_slot.dart';
+import '../../../../core/data/repositories/restaurant_repository.dart';
+import '../../../../core/data/repositories/table_repository.dart';
+import '../../../../core/data/repositories/food_category_repository.dart';
+import '../../../../vendor_app/providers/vendor_restaurant_providers.dart';
 import '../controllers/restaurant_form_controller.dart';
 import '../widgets/food_category_picker.dart';
 import '../widgets/time_slot_picker.dart';
@@ -30,12 +34,91 @@ class _VendorRestaurantFormPageState
   final _addressController = TextEditingController();
 
   File? _imageFile;
+  String? _currentImageUrl;
   FoodCategory? _selectedCategory;
   Location? _location;
   List<TimeSlot> _timeSlots = [];
   List<TableModel> _tables = [];
+  bool _isLoading = true;
+  bool _isSubmitting = false;
 
   bool get isEditing => widget.restaurantId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (isEditing) {
+      _loadRestaurantData();
+    } else {
+      _isLoading = false;
+    }
+  }
+
+  Future<void> _loadRestaurantData() async {
+    if (!mounted) return;
+
+    try {
+      // Use repositories directly
+      final restaurantRepository = RestaurantRepository();
+      final tableRepository = TableRepository();
+      final categoryRepository = FoodCategoryRepository();
+
+      final restaurant = await restaurantRepository.getRestaurant(
+        widget.restaurantId!,
+      );
+      final tables = await tableRepository.getTables(widget.restaurantId!);
+
+      if (restaurant != null && mounted) {
+        setState(() {
+          _nameController.text = restaurant.name;
+          _descriptionController.text = restaurant.description;
+          _currentImageUrl = restaurant.imageUrl;
+          _location = restaurant.location;
+          _addressController.text =
+              restaurant.location.address ?? 'Unknown address';
+          _timeSlots = restaurant.timeSlots;
+          _tables = tables;
+          _isLoading = false;
+        });
+
+        // Load the actual category from the repository to match dropdown items
+        if (mounted) {
+          try {
+            final categories = await categoryRepository.getAllCategories();
+            final matchingCategory = categories.firstWhere(
+              (c) => c.id == restaurant.foodCategoryId,
+              orElse: () => FoodCategory(
+                id: restaurant.foodCategoryId,
+                name: restaurant.foodCategoryName ?? 'Unknown',
+              ),
+            );
+            if (mounted) {
+              setState(() {
+                _selectedCategory = matchingCategory;
+              });
+            }
+          } catch (e) {
+            // Fallback to creating a basic category if loading fails
+            if (mounted) {
+              setState(() {
+                _selectedCategory = FoodCategory(
+                  id: restaurant.foodCategoryId,
+                  name: restaurant.foodCategoryName ?? 'Unknown',
+                );
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading restaurant: $e')));
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -107,6 +190,9 @@ class _VendorRestaurantFormPageState
   }
 
   Future<void> _saveRestaurant() async {
+    // Prevent multiple submissions
+    if (_isSubmitting) return;
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -140,33 +226,83 @@ class _VendorRestaurantFormPageState
       return;
     }
 
-    final controller = ref.read(restaurantFormControllerProvider.notifier);
+    try {
+      setState(() => _isSubmitting = true);
 
-    final restaurantId = await controller.createRestaurant(
-      name: _nameController.text.trim(),
-      description: _descriptionController.text.trim(),
-      imageFile: _imageFile,
-      category: _selectedCategory!,
-      location: _location!,
-      timeSlots: _timeSlots,
-      tables: _tables,
-    );
+      final controller = ref.read(restaurantFormControllerProvider.notifier);
 
-    if (mounted) {
-      final state = ref.read(restaurantFormControllerProvider);
-
-      if (restaurantId != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Restaurant created successfully!')),
+      if (isEditing) {
+        // Update existing restaurant
+        final success = await controller.updateRestaurant(
+          restaurantId: widget.restaurantId!,
+          name: _nameController.text.trim(),
+          description: _descriptionController.text.trim(),
+          imageFile: _imageFile,
+          currentImageUrl: _currentImageUrl,
+          category: _selectedCategory!,
+          location: _location!,
+          timeSlots: _timeSlots,
+          tables: _tables,
         );
-        context.pop();
-        return;
-      }
 
-      if (state.error != null) {
+        if (!success) {
+          throw Exception('Failed to update restaurant');
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Restaurant updated successfully')),
+          );
+
+          // Go back to previous page (dashboard)
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/dashboard');
+          }
+        }
+      } else {
+        // Create new restaurant
+        final restaurantId = await controller.createRestaurant(
+          name: _nameController.text.trim(),
+          description: _descriptionController.text.trim(),
+          imageFile: _imageFile,
+          category: _selectedCategory!,
+          location: _location!,
+          timeSlots: _timeSlots,
+          tables: _tables,
+        );
+
+        if (restaurantId == null) {
+          throw Exception('Failed to create restaurant');
+        }
+
+        if (mounted) {
+          // Save restaurant ID to local storage for persistence
+          await ref
+              .read(currentRestaurantIdNotifierProvider.notifier)
+              .setRestaurantId(restaurantId);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Restaurant created successfully')),
+          );
+
+          // Navigate to dashboard instead of pop
+          context.go('/dashboard');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        final state = ref.read(restaurantFormControllerProvider);
+        final message = state.error ?? e.toString();
+
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${state.error}')));
+        ).showSnackBar(SnackBar(content: Text('Error: $message')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
       }
     }
   }
@@ -179,136 +315,150 @@ class _VendorRestaurantFormPageState
       appBar: AppBar(
         title: Text(isEditing ? 'Edit Restaurant' : 'Add Restaurant'),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/dashboard');
+            }
+          },
+        ),
       ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Image picker
-                  _buildImagePicker(),
-                  const SizedBox(height: 24),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Image picker
+                        _buildImagePicker(),
+                        const SizedBox(height: 24),
 
-                  // Basic info
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Restaurant Name *',
-                      hintText: 'Enter restaurant name',
-                      prefixIcon: Icon(Icons.restaurant),
-                      border: OutlineInputBorder(),
+                        // Basic info
+                        TextFormField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Restaurant Name *',
+                            hintText: 'Enter restaurant name',
+                            prefixIcon: Icon(Icons.restaurant),
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter restaurant name';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        TextFormField(
+                          controller: _descriptionController,
+                          decoration: const InputDecoration(
+                            labelText: 'Description *',
+                            hintText: 'Describe your restaurant',
+                            prefixIcon: Icon(Icons.description),
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 3,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter description';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Food category picker
+                        FoodCategoryPicker(
+                          selectedCategory: _selectedCategory,
+                          onCategorySelected: (category) {
+                            if (mounted) {
+                              setState(() {
+                                _selectedCategory = category;
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Location
+                        _buildLocationSection(),
+                        const SizedBox(height: 24),
+
+                        // Time slots
+                        TimeSlotPicker(
+                          initialSlots: _timeSlots,
+                          onSlotsChanged: (slots) {
+                            if (mounted) {
+                              setState(() {
+                                _timeSlots = slots;
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Tables configuration
+                        TableConfiguration(
+                          initialTables: _tables,
+                          onTablesChanged: (tables) {
+                            if (mounted) {
+                              setState(() {
+                                _tables = tables;
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 32),
+
+                        // Save button
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: state.isLoading ? null : _saveRestaurant,
+                            icon: state.isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.save),
+                            label: Text(
+                              isEditing
+                                  ? 'Update Restaurant'
+                                  : 'Create Restaurant',
+                            ),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.all(16),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter restaurant name';
-                      }
-                      return null;
-                    },
                   ),
-                  const SizedBox(height: 16),
+                ),
 
-                  TextFormField(
-                    controller: _descriptionController,
-                    decoration: const InputDecoration(
-                      labelText: 'Description *',
-                      hintText: 'Describe your restaurant',
-                      prefixIcon: Icon(Icons.description),
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter description';
-                      }
-                      return null;
-                    },
+                // Loading overlay
+                if (state.isLoading)
+                  Container(
+                    color: Colors.black26,
+                    child: const Center(child: CircularProgressIndicator()),
                   ),
-                  const SizedBox(height: 24),
-
-                  // Food category picker
-                  FoodCategoryPicker(
-                    selectedCategory: _selectedCategory,
-                    onCategorySelected: (category) {
-                      if (mounted) {
-                        setState(() {
-                          _selectedCategory = category;
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Location
-                  _buildLocationSection(),
-                  const SizedBox(height: 24),
-
-                  // Time slots
-                  TimeSlotPicker(
-                    initialSlots: _timeSlots,
-                    onSlotsChanged: (slots) {
-                      if (mounted) {
-                        setState(() {
-                          _timeSlots = slots;
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Tables configuration
-                  TableConfiguration(
-                    initialTables: _tables,
-                    onTablesChanged: (tables) {
-                      if (mounted) {
-                        setState(() {
-                          _tables = tables;
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Save button
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: state.isLoading ? null : _saveRestaurant,
-                      icon: state.isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.save),
-                      label: Text(
-                        isEditing ? 'Update Restaurant' : 'Create Restaurant',
-                      ),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.all(16),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
+              ],
             ),
-          ),
-
-          // Loading overlay
-          if (state.isLoading)
-            Container(
-              color: Colors.black26,
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-        ],
-      ),
     );
   }
 
@@ -336,6 +486,29 @@ class _VendorRestaurantFormPageState
                     borderRadius: BorderRadius.circular(8),
                     child: Image.file(_imageFile!, fit: BoxFit.cover),
                   )
+                : _currentImageUrl != null && _currentImageUrl!.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      _currentImageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.add_photo_alternate,
+                            size: 48,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Tap to change restaurant image',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -353,13 +526,17 @@ class _VendorRestaurantFormPageState
                   ),
           ),
         ),
-        if (_imageFile != null)
+        if (_imageFile != null ||
+            (_currentImageUrl != null && _currentImageUrl!.isNotEmpty))
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: TextButton.icon(
               onPressed: () {
                 if (mounted) {
-                  setState(() => _imageFile = null);
+                  setState(() {
+                    _imageFile = null;
+                    _currentImageUrl = null;
+                  });
                 }
               },
               icon: const Icon(Icons.delete, color: Colors.red),

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'vendor_router.dart';
 
-class VendorApp extends StatelessWidget {
+class VendorApp extends ConsumerWidget {
   const VendorApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(vendorRouterProvider);
+
     return MaterialApp.router(
       title: 'Restaurant Manager - Vendor',
       debugShowCheckedModeBanner: false,
@@ -27,7 +30,7 @@ class VendorApp extends StatelessWidget {
           filled: true,
         ),
       ),
-      routerConfig: VendorRouter.router,
+      routerConfig: router,
     );
   }
 }

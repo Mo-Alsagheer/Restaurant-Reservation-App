@@ -17,9 +17,11 @@ class TableFirestoreDataSource {
 
   // Create a new table
   Future<String> createTable(String restaurantId, TableModel table) async {
-    final docRef = await _tablesCollection(
-      restaurantId,
-    ).add(_toFirestore(table));
+    final data = {
+      ..._toFirestore(table),
+      'createdAt': FieldValue.serverTimestamp(),
+    };
+    final docRef = await _tablesCollection(restaurantId).add(data);
     return docRef.id;
   }
 

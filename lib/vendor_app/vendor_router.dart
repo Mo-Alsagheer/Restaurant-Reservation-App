@@ -1,13 +1,30 @@
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/restaurants/presentation/vendor_restaurant_dashboard_page.dart';
 import '../features/restaurants/presentation/pages/vendor_restaurant_form_page_new.dart';
 import '../features/restaurants/presentation/pages/food_category_management_page.dart';
 import '../features/tables/presentation/table_management_page.dart';
 import '../features/bookings/presentation/vendor_bookings_page.dart';
+import 'providers/vendor_restaurant_providers.dart';
 
-class VendorRouter {
-  static final GoRouter router = GoRouter(
+// Provider for the GoRouter
+final vendorRouterProvider = Provider<GoRouter>((ref) {
+  final restaurantIdNotifier = ref.watch(currentRestaurantIdNotifierProvider);
+
+  return GoRouter(
     initialLocation: '/dashboard',
+    redirect: (context, state) {
+      // Get the current restaurant ID
+      final restaurantId = restaurantIdNotifier.valueOrNull;
+      final isGoingToAddRestaurant = state.matchedLocation == '/restaurant/add';
+
+      // If vendor has a restaurant and tries to go to add page, redirect to dashboard
+      if (restaurantId != null && isGoingToAddRestaurant) {
+        return '/dashboard';
+      }
+
+      return null; // No redirect needed
+    },
     routes: [
       GoRoute(
         path: '/dashboard',
@@ -49,5 +66,12 @@ class VendorRouter {
         builder: (context, state) => const FoodCategoryManagementPage(),
       ),
     ],
+  );
+});
+
+class VendorRouter {
+  // Keep for backward compatibility, but router should now be accessed via provider
+  static GoRouter get router => throw UnimplementedError(
+    'Use vendorRouterProvider instead of VendorRouter.router',
   );
 }
