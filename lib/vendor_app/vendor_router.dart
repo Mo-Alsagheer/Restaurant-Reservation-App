@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/restaurants/presentation/vendor_restaurant_dashboard_page.dart';
+import '../features/restaurants/presentation/restaurant_selection_page.dart';
 import '../features/restaurants/presentation/pages/vendor_restaurant_form_page_new.dart';
 import '../features/restaurants/presentation/pages/food_category_management_page.dart';
 import '../features/tables/presentation/table_management_page.dart';
@@ -30,6 +31,11 @@ final vendorRouterProvider = Provider<GoRouter>((ref) {
         path: '/dashboard',
         name: 'dashboard',
         builder: (context, state) => const VendorRestaurantDashboardPage(),
+      ),
+      GoRoute(
+        path: '/restaurants',
+        name: 'select-restaurant',
+        builder: (context, state) => const RestaurantSelectionPage(),
       ),
       GoRoute(
         path: '/restaurant/add',

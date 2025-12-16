@@ -22,6 +22,11 @@ class VendorRestaurantDashboardPage extends ConsumerWidget {
         title: const Text('Restaurant Manager'),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.list),
+            tooltip: 'Select Restaurant',
+            onPressed: () => context.go('/restaurants'),
+          ),
           restaurantAsync.when(
             data: (restaurant) {
               if (restaurant != null) {
