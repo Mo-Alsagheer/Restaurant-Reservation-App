@@ -31,9 +31,7 @@ class RestaurantSelectionPage extends ConsumerWidget {
         ],
       ),
       body: restaurantsAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
